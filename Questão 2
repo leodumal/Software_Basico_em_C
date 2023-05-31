@@ -1,0 +1,48 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+
+int main(){
+    int fd;
+    struct termios serialParams;
+    fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
+    if (fd == -1){
+        perror("falha ao abrir a porta");
+        return 1;
+    }
+    if (tcgetattr(fd, &serialParams) < 0){
+        perror("falha ao obter os parâmetros da porta");
+        close(fd);
+        return 1;
+    }
+    serialParams.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
+    serialParams.c_iflag = 1000;
+    serialParams.c_oflag = 1000;
+    serialParams.c_lflag = 1000;
+    cfsetospeed(&serialParams, B9600);
+    cfsetispeed(&serialParams, B9600);
+    if (tcsetattr(fd, TCSANOW, &serialParams) < 0){
+        perror("falha ao configurar a porta");
+        close(fd);
+        return 1;
+    }
+    char data[] = "ola porta serial";
+    int dataSize = sizeof(data) - 1;
+    if (write(fd, data, dataSize) != dataSize){
+        perror("falha ao escrever a porta");
+        close(fd);
+        return 1;
+    }
+    char receivedData[100];
+    int bytesRead = read(fd, receivedData, sizeof(receivedData));
+    if (bytesRead < 0){
+        perror("falha ao ler a porta");
+        close(fd);
+        return 1;
+    }
+    printf("Os dados são: %.*s\n", bytesRead, receivedData);
+    close(fd);
+    return 0;
+}
